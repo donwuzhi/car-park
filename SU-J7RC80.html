@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优惠券领取</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI","Microsoft YaHei",sans-serif}body{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}.container{width:100%;max-width:400px;background:rgba(255,255,255,0.95);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden;backdrop-filter:blur(10px)}.header{background:linear-gradient(90deg,#2575fc,#6a11cb);color:white;padding:20px;text-align:center}.header h1{font-size:1.5rem;font-weight:600}.content{padding:24px;text-align:center}.car-info{background:#f0f7ff;border-radius:8px;padding:16px;margin-bottom:20px;border-left:4px solid #2575fc}.car-number{font-size:1.8rem;font-weight:700;color:#2575fc;letter-spacing:2px;margin-top:8px}.result-area{margin-top:20px;padding:20px;border-radius:8px;background:#f8f9fa;border:1px solid #e1e5eb}.status-icon{font-size:3rem;margin-bottom:12px}.status-text{font-size:1.2rem;font-weight:600;margin-bottom:8px}.status-success{color:#2e7d32}.status-error{color:#c62828}.loading{display:none;text-align:center;padding:20px}.spinner{border:4px solid rgba(37,117,252,0.2);border-top:4px solid #2575fc;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 12px}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:16px;background:linear-gradient(90deg,#2575fc,#6a11cb);color:white;box-shadow:0 4px 12px rgba(37,117,252,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(37,117,252,0.4)}.btn:disabled{background:#ccc;cursor:not-allowed;transform:none;box-shadow:none}.footer{text-align:center;padding:16px;color:#666;font-size:0.85rem;border-top:1px solid #eee;background:#f9f9f9}.limit-info{background:#fff3cd;border-radius:8px;padding:12px;margin:10px 0;font-size:0.9rem;color:#856404}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>优惠券领取</h1></div>
+        <div class="content">
+            <div class="car-info">
+                <div>车牌号</div>
+                <div class="car-number" id="carNumberDisplay">苏J7RC80</div>
+            </div>
+            
+            <div class="limit-info" id="limitInfo">
+                <div>截止日期: <span id="expiryDate">2026年1月21日</span></div>
+                <div>剩余次数: <span id="remainingUsesSpan">999次</span></div>
+            </div>
+            
+            <div class="loading" id="loading"><div class="spinner"></div><div>正在领取优惠券...</div></div>
+            <div class="result-area" id="resultArea" style="display:none;">
+                <div class="status-icon" id="statusIcon">✓</div>
+                <div class="status-text" id="statusText">领取成功</div>
+                <div id="messageText">优惠券已发放至您的账户</div>
+            </div>
+            <button id="actionBtn" class="btn">立即领取</button>
+        </div>
+        <div class="footer">优惠券发放系统</div>
+    </div>
+    <script>
+        // 页面参数
+        const vhPNumber = "苏J7RC80";
+        const validDays = 30;
+        const maxUses = 999;
+        const couponId = "ycwzfd" + Date.now();
+        
+        // 存储键名基于车牌号和有效期生成，确保唯一性
+        const storageKey = 'coupon_usage_' + vhPNumber.replace(/[^a-zA-Z0-9]/g, '_') + '_' + validDays;
+        
+        // 获取服务器时间（通过API获取）
+        async function getServerTime() {
+            try {
+                // 尝试从API获取服务器时间
+                const response = await fetch('https://worldtimeapi.org/api/ip');
+                const data = await response.json();
+                return new Date(data.utc_datetime).getTime();
+            } catch (error) {
+                console.warn('无法获取服务器时间，使用本地时间', error);
+                return Date.now(); // 如果无法获取服务器时间，则使用本地时间
+            }
+        }
+        
+        // 读取本地存储的使用情况
+        let usageData = JSON.parse(localStorage.getItem(storageKey)) || {
+            count: 0,
+            firstAccess: null, // 初始值设为null，表示首次访问
+            maxUses: maxUses
+        };
+        
+        // 如果是首次访问，记录访问时间
+        if (usageData.firstAccess === null) {
+            usageData.firstAccess = Date.now();
+            localStorage.setItem(storageKey, JSON.stringify(usageData));
+        }
+        
+        // 检查是否过期（使用服务器时间）
+        getServerTime().then(serverTime => {
+            const timeDiff = (serverTime - usageData.firstAccess) / (1000 * 60 * 60 * 24); // 转换为天数
+            
+            if (timeDiff > validDays) {
+                // 已过期
+                document.getElementById('actionBtn').disabled = true;
+                document.getElementById('messageText').textContent = '页面已过期';
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('statusIcon').textContent = '⏰';
+                document.getElementById('statusText').textContent = '页面已过期';
+                document.getElementById('statusText').className = 'status-text status-error';
+            } else if (usageData.count >= usageData.maxUses) {
+                // 已达到最大使用次数
+                document.getElementById('actionBtn').disabled = true;
+                document.getElementById('messageText').textContent = '已达到最大使用次数';
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('statusIcon').textContent = '❌';
+                document.getElementById('statusText').textContent = '已领完';
+                document.getElementById('statusText').className = 'status-text status-error';
+            } else {
+                // 更新剩余次数显示
+                const remainingUses = usageData.maxUses - usageData.count;
+                document.getElementById('remainingUsesSpan').textContent = remainingUses + '次';
+            }
+        }).catch(error => {
+            console.error('获取服务器时间失败:', error);
+            // 如果获取服务器时间失败，使用本地时间进行判断
+            const now = Date.now();
+            const timeDiff = (now - usageData.firstAccess) / (1000 * 60 * 60 * 24); // 转换为天数
+            
+            if (timeDiff > validDays) {
+                // 已过期
+                document.getElementById('actionBtn').disabled = true;
+                document.getElementById('messageText').textContent = '页面已过期';
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('statusIcon').textContent = '⏰';
+                document.getElementById('statusText').textContent = '页面已过期';
+                document.getElementById('statusText').className = 'status-text status-error';
+            } else if (usageData.count >= usageData.maxUses) {
+                // 已达到最大使用次数
+                document.getElementById('actionBtn').disabled = true;
+                document.getElementById('messageText').textContent = '已达到最大使用次数';
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('statusIcon').textContent = '❌';
+                document.getElementById('statusText').textContent = '已领完';
+                document.getElementById('statusText').className = 'status-text status-error';
+            } else {
+                // 更新剩余次数显示
+                const remainingUses = usageData.maxUses - usageData.count;
+                document.getElementById('remainingUsesSpan').textContent = remainingUses + '次';
+            }
+        });
+        
+        document.addEventListener("DOMContentLoaded",function(){
+            const actionBtn = document.getElementById("actionBtn");
+            const loadingDiv = document.getElementById("loading");
+            const resultArea = document.getElementById("resultArea");
+            const statusIcon = document.getElementById("statusIcon");
+            const statusText = document.getElementById("statusText");
+            const messageText = document.getElementById("messageText");
+            
+            function generateNewCouponId() {
+                // 每次使用不同的优惠券ID
+                return 'ycwzfd' + Date.now() + Math.floor(Math.random() * 1000);
+            }
+            
+            function makeRequest() {
+                const newCouponId = generateNewCouponId();
+                const requestData = {
+                    v: "1.0",
+                    app_key: "d7ca0abc-6b4b-44e4-bc71-7fd329ce2f7a",
+                    app_pass: "17f6e649-d26f-488f-b03b-5676aa3be362",
+                    sid: "ycwzfd",
+                    rule_id: "2979",
+                    coupon_id: newCouponId,
+                    vh_p_number: vhPNumber,
+                    value: "1",
+                    secret: false,
+                    all_free: 0,
+                    car_onsite: 1,
+                    parking_fee: 1200,
+                    parking_time: 26536
+                };
+                
+                return fetch("https://coupon.szzcloud.club/get_coupon/enterprise.coupon.delivery", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(requestData)
+                });
+            }
+            
+            function showResult(success, msg) {
+                loadingDiv.style.display = "none";
+                resultArea.style.display = "block";
+                actionBtn.disabled = true;
+                
+                if (success) {
+                    statusIcon.textContent = "✓";
+                    statusText.textContent = "领取成功";
+                    statusText.className = "status-text status-success";
+                    messageText.textContent = msg || "优惠券已发放至您的账户";
+                    
+                    // 更新使用次数
+                    usageData.count++;
+                    localStorage.setItem(storageKey, JSON.stringify(usageData));
+                    
+                    // 更新剩余次数显示
+                    const remainingUses = usageData.maxUses - usageData.count;
+                    document.getElementById('remainingUsesSpan').textContent = remainingUses + '次';
+                    
+                    // 如果已达到最大使用次数，禁用按钮
+                    if (usageData.count >= usageData.maxUses) {
+                        messageText.textContent = "优惠券已发放，已达到最大使用次数";
+                    }
+                } else {
+                    statusIcon.textContent = "✗";
+                    statusText.textContent = "领取失败";
+                    statusText.className = "status-text status-error";
+                    messageText.textContent = msg || "请稍后重试";
+                }
+            }
+            
+            actionBtn.addEventListener("click", async function() {
+                // 再次检查是否已达到最大使用次数（双重保险）
+                if (usageData.count >= usageData.maxUses) {
+                    showResult(false, "已达到最大使用次数");
+                    return;
+                }
+                
+                // 再次检查是否过期（使用服务器时间）
+                try {
+                    const serverTime = await getServerTime();
+                    const timeDiff = (serverTime - usageData.firstAccess) / (1000 * 60 * 60 * 24);
+                    
+                    if (timeDiff > validDays) {
+                        showResult(false, "页面已过期");
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('服务器时间检查失败:', error);
+                    // 如果无法获取服务器时间，使用本地时间检查
+                    const now = Date.now();
+                    const timeDiff = (now - usageData.firstAccess) / (1000 * 60 * 60 * 24);
+                    
+                    if (timeDiff > validDays) {
+                        showResult(false, "页面已过期");
+                        return;
+                    }
+                }
+                
+                actionBtn.disabled = true;
+                loadingDiv.style.display = "block";
+                resultArea.style.display = "none";
+                
+                try {
+                    const response = await makeRequest();
+                    const data = await response.json();
+                    
+                    if (data.code === 10000) {
+                        showResult(true, "优惠券领取成功！");
+                    } else {
+                        showResult(false, data.msg || "领取失败");
+                    }
+                } catch (error) {
+                    showResult(false, error.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
