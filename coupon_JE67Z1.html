@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优惠券领取</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+        body{background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+        .container{width:100%;max-width:420px;background:rgba(255,255,255,0.96);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden}
+        .header{background:linear-gradient(90deg,#2575fc,#6a11cb);color:white;padding:20px;text-align:center}
+        .header h1{font-size:1.4rem;font-weight:600}
+        .header p{opacity:.85;font-size:.8rem;margin-top:4px}
+        .content{padding:24px;text-align:center}
+        .expiry-bar{background:#fff8e6;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:.85rem;color:#8a6d1a}
+        .expiry-bar strong{color:#a07d1c}
+        .tabs{display:flex;gap:0;margin-bottom:0;border-radius:12px 12px 0 0;overflow:hidden;background:#eef2f7}
+        .tab{flex:1;padding:12px 8px;text-align:center;font-size:.92rem;font-weight:600;color:#8a93a0;cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;user-select:none}
+        .tab.active{background:#fff;color:#2575fc;border-bottom-color:#2575fc}
+        .tab:hover:not(.active){background:rgba(255,255,255,.5)}
+        .tab-panel{display:none;padding:20px;background:#fff;border-radius:0 0 12px 12px}
+        .tab-panel.active{display:block}
+        .section-title{font-size:.95rem;font-weight:600;color:#5b6b7f;margin-bottom:12px}
+        .car-info{background:#f0f7ff;border-radius:12px;padding:16px;margin-bottom:14px}
+        .car-label{font-size:.82rem;color:#5b6b7f;margin-bottom:8px}
+        .plate{display:inline-block;background:linear-gradient(135deg,#0057b8,#1e78e0);color:#fff;border-radius:8px;padding:10px 22px;font-size:1.5rem;font-weight:700;letter-spacing:4px;border:2px solid rgba(255,255,255,.75);box-shadow:0 4px 10px rgba(0,87,184,.3)}
+        .plate-input{width:100%;padding:12px 8px;font-size:1.35rem;font-weight:700;letter-spacing:3px;text-align:center;text-transform:uppercase;border:2px solid #1e78e0;border-radius:8px;background:linear-gradient(135deg,#0057b8,#1e78e0);color:#fff;outline:none;transition:box-shadow .2s}
+        .plate-input:focus{box-shadow:0 0 0 3px rgba(30,120,224,.25)}
+        .plate-input::placeholder{color:rgba(255,255,255,.65);font-weight:400;font-size:.95rem;letter-spacing:1px}
+        .plate-input.shake{animation:shake .3s}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+        .plate-error{display:none;color:#c62828;font-size:.82rem;margin-top:8px}
+        .stats{display:flex;gap:10px;margin-bottom:14px}
+        .stat{flex:1;background:#f8f9fa;border:1px solid #e9edf2;border-radius:10px;padding:10px 8px}
+        .stat-label{font-size:.72rem;color:#8a93a0;margin-bottom:4px}
+        .stat-value{font-size:.95rem;font-weight:700;color:#333}
+        .divider{height:1px;background:#eee;margin:20px 0}
+        .loading{display:none;text-align:center;padding:14px}
+        .spinner{border:3px solid rgba(37,117,252,.2);border-top:3px solid #2575fc;border-radius:50%;width:32px;height:32px;animation:spin 1s linear infinite;margin:0 auto 8px}
+        @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        .result-area{display:none;padding:16px;border-radius:12px;background:#f8f9fa;border:1px solid #e1e5eb;margin-bottom:14px}
+        .icon-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;margin:0 auto 8px}
+        .result-area.success .icon-circle{background:#e8f5e9;color:#2e7d32}
+        .result-area.error .icon-circle{background:#ffebee;color:#c62828}
+        .result-area.warn .icon-circle{background:#fff3cd;color:#a07d1c}
+        .status-text{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+        .success .status-text{color:#2e7d32}
+        .error .status-text{color:#c62828}
+        .warn .status-text{color:#a07d1c}
+        .msg{font-size:.85rem;color:#666}
+        .btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;background:linear-gradient(90deg,#2575fc,#6a11cb);color:white;box-shadow:0 4px 12px rgba(37,117,252,.3);transition:all .25s}
+        .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(37,117,252,.4)}
+        .btn:disabled{background:#c5cbd3;cursor:not-allowed;box-shadow:none;transform:none}
+        .footer{text-align:center;padding:14px;color:#8a93a0;font-size:.8rem;border-top:1px solid #eef0f3;background:#f9f9f9}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>优惠券领取</h1>
+            <p>停车优惠券 · 限时发放</p>
+        </div>
+        <div class="content">
+            <div class="expiry-bar">截止日期：<strong>2027年10月6日</strong></div>
+            <div class="tabs"><div class="tab active" data-tab="fixed">固定车牌</div><div class="tab" data-tab="custom">自定义车牌</div></div>
+            <div class="tab-panel active" id="panelFixed">
+        <div class="car-info">
+            <div class="car-label">车牌号</div>
+            <div class="plate">苏JE67Z1</div>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">剩余机会</div>
+                <div class="stat-value"><span id="fixedRemaining">999次</span></div>
+            </div>
+        </div>
+        <div class="loading" id="fixedLoading"><div class="spinner"></div><div>正在领取...</div></div>
+        <div class="result-area" id="fixedResult">
+            <div class="icon-circle" id="fixedIcon">✓</div>
+            <div class="status-text" id="fixedStatusText">领取成功</div>
+            <div id="fixedMsg">优惠券已发放至您的账户</div>
+        </div>
+        <button id="fixedBtn" class="btn">立即领取</button></div><div class="tab-panel" id="panelCustom">
+        <div class="car-info">
+            <div class="car-label">请输入车牌号</div>
+            <input type="text" id="plateInput" class="plate-input" maxlength="8" placeholder="如：苏J7RC80" autocomplete="off">
+            <div class="plate-error" id="plateError">车牌号格式不正确，请检查后重试</div>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">剩余机会</div>
+                <div class="stat-value"><span id="customRemaining">12次</span></div>
+            </div>
+        </div>
+        <div class="loading" id="customLoading"><div class="spinner"></div><div>正在领取...</div></div>
+        <div class="result-area" id="customResult">
+            <div class="icon-circle" id="customIcon">✓</div>
+            <div class="status-text" id="customStatusText">领取成功</div>
+            <div id="customMsg">优惠券已发放至您的账户</div>
+        </div>
+        <button id="customBtn" class="btn">立即领取</button></div>
+        </div>
+        <div class="footer">优惠券发放系统</div>
+    </div>
+    <script>
+        (function () {
+            var vhPNumber = "苏JE67Z1";
+            var validDays = 365;
+            var fixedMaxUses = 999;
+            var customMaxUses = 12;
+            var customEnabled = true;
+            var pageId = "muw3f161psxemb";
+            var platePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-HJ-NP-Z][A-HJ-NP-Z0-9]{4,5}[A-HJ-NP-Z0-9挂学警港澳]$/;
+
+            // 标签切换
+            var tabs = document.querySelectorAll('.tab');
+            tabs.forEach(function (t) {
+                t.addEventListener('click', function () {
+                    tabs.forEach(function (x) { x.classList.remove('active'); });
+                    t.classList.add('active');
+                    var target = t.getAttribute('data-tab');
+                    document.getElementById('panelFixed').classList.toggle('active', target === 'fixed');
+                    if (customEnabled) document.getElementById('panelCustom').classList.toggle('active', target === 'custom');
+                });
+            });
+
+            // 固定车牌使用记录
+            var fixedKey = 'coupon_fixed_' + pageId;
+            var fixedData = JSON.parse(localStorage.getItem(fixedKey)) || { count: 0, firstAccess: null, maxUses: fixedMaxUses };
+            if (fixedData.firstAccess === null) { fixedData.firstAccess = Date.now(); localStorage.setItem(fixedKey, JSON.stringify(fixedData)); }
+
+            // 自定义车牌使用记录
+            var customKey = 'coupon_custom_' + pageId;
+            var customData = { count: 0, firstAccess: fixedData.firstAccess, maxUses: customMaxUses };
+            if (customEnabled) {
+                var saved = JSON.parse(localStorage.getItem(customKey));
+                if (saved) { customData = saved; }
+                else { localStorage.setItem(customKey, JSON.stringify(customData)); }
+            }
+
+            function getServerTime() {
+                return fetch('https://worldtimeapi.org/api/ip')
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) { return new Date(d.utc_datetime).getTime(); })
+                    .catch(function () { return Date.now(); });
+            }
+
+            function isExpired(now) {
+                return (now - fixedData.firstAccess) / 86400000 > validDays;
+            }
+
+            function makeRequest(plate) {
+                var requestData = {
+                    v: "1.0",
+                    app_key: "d7ca0abc-6b4b-44e4-bc71-7fd329ce2f7a",
+                    app_pass: "17f6e649-d26f-488f-b03b-5676aa3be362",
+                    sid: "ycwzfd",
+                    rule_id: "2979",
+                    coupon_id: 'ycwzfd' + Date.now() + Math.floor(Math.random() * 1000),
+                    vh_p_number: plate,
+                    value: "1",
+                    secret: false,
+                    all_free: 0,
+                    car_onsite: 1,
+                    parking_fee: 1200,
+                    parking_time: 26536
+                };
+                return fetch('https://coupon.szzcloud.club/get_coupon/enterprise.coupon.delivery', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+            }
+
+            // 通用领取逻辑
+            function bindClaim(opts) {
+                var btn = document.getElementById(opts.btnId);
+                var loadingDiv = document.getElementById(opts.loadingId);
+                var resultArea = document.getElementById(opts.resultId);
+                var icon = document.getElementById(opts.iconId);
+                var statusText = document.getElementById(opts.statusTextId);
+                var msg = document.getElementById(opts.msgId);
+                var remainingSpan = document.getElementById(opts.remainingId);
+                var data = opts.data;
+                var getPlate = opts.getPlate;
+
+                function showState(kind, text) {
+                    var clsMap = { success: 'success', fail: 'error', expired: 'warn', usedup: 'error' };
+                    loadingDiv.style.display = 'none';
+                    resultArea.style.display = 'block';
+                    resultArea.className = 'result-area ' + clsMap[kind];
+                    if (kind === 'success') {
+                        icon.textContent = '✓';
+                        statusText.textContent = '领取成功';
+                        msg.textContent = data.count >= data.maxUses ? '优惠券已发放，机会已用完' : (text || '优惠券已发放至您的账户');
+                    } else if (kind === 'fail') {
+                        icon.textContent = '✕';
+                        statusText.textContent = '领取失败';
+                        msg.textContent = text || '请稍后重试';
+                    } else if (kind === 'expired') {
+                        icon.textContent = '!';
+                        statusText.textContent = '页面已过期';
+                        msg.textContent = '本页面已超过有效期限';
+                    } else {
+                        icon.textContent = '✕';
+                        statusText.textContent = '已领完';
+                        msg.textContent = '已达到最大使用次数';
+                    }
+                    btn.disabled = !(kind === 'fail' || (kind === 'success' && data.count < data.maxUses));
+                }
+
+                function refreshRemaining() {
+                    remainingSpan.textContent = (data.maxUses - data.count) + '次';
+                }
+
+                // 初始状态检查
+                getServerTime().then(function (now) {
+                    if (isExpired(now)) showState('expired');
+                    else if (data.count >= data.maxUses) showState('usedup');
+                    else refreshRemaining();
+                });
+
+                btn.addEventListener('click', async function () {
+                    if (data.count >= data.maxUses) { showState('usedup'); return; }
+
+                    var plate = getPlate();
+                    if (plate === null) return; // 校验失败
+
+                    var serverNow = await getServerTime();
+                    if (isExpired(serverNow)) { showState('expired'); return; }
+
+                    btn.disabled = true;
+                    loadingDiv.style.display = 'block';
+                    resultArea.style.display = 'none';
+
+                    try {
+                        var response = await makeRequest(plate);
+                        var result = await response.json();
+                        if (result.code === 10000) {
+                            data.count++;
+                            localStorage.setItem(opts.storageKey, JSON.stringify(data));
+                            showState('success', '优惠券已发放至车牌 ' + plate + ' 的账户');
+                            refreshRemaining();
+                        } else {
+                            showState('fail', result.msg || '领取失败');
+                        }
+                    } catch (err) {
+                        showState('fail', err.message);
+                    }
+                });
+            }
+
+            // 绑定固定车牌
+            bindClaim({
+                btnId: 'fixedBtn', loadingId: 'fixedLoading', resultId: 'fixedResult',
+                iconId: 'fixedIcon', statusTextId: 'fixedStatusText', msgId: 'fixedMsg',
+                remainingId: 'fixedRemaining', data: fixedData, storageKey: fixedKey,
+                getPlate: function () { return vhPNumber; }
+            });
+
+            // 绑定自定义车牌
+            if (customEnabled) {
+                var plateInput = document.getElementById('plateInput');
+                var plateError = document.getElementById('plateError');
+                plateInput.addEventListener('input', function () { this.value = this.value.toUpperCase(); });
+                plateInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('customBtn').click(); });
+
+                bindClaim({
+                    btnId: 'customBtn', loadingId: 'customLoading', resultId: 'customResult',
+                    iconId: 'customIcon', statusTextId: 'customStatusText', msgId: 'customMsg',
+                    remainingId: 'customRemaining', data: customData, storageKey: customKey,
+                    getPlate: function () {
+                        var plate = plateInput.value.trim().toUpperCase();
+                        if (!platePattern.test(plate)) {
+                            plateError.style.display = 'block';
+                            plateInput.classList.remove('shake');
+                            void plateInput.offsetWidth;
+                            plateInput.classList.add('shake');
+                            return null;
+                        }
+                        plateError.style.display = 'none';
+                        return plate;
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
